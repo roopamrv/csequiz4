@@ -20,62 +20,42 @@
         var margin = { top: 20, right: 20, bottom: 30, left: 40 };
         var chartWidth = svgWidth - margin.left - margin.right;
         var chartHeight = svgHeight - margin.top - margin.bottom;
+        var radius = Math.min(chartWidth, chartHeight) / 2;
 
         var svg = d3.select("#chart")
             .append("svg")
             .attr("width", svgWidth)
             .attr("height", svgHeight);
 
-        var xScale = d3.scaleBand()
+        var color = d3.scaleOrdinal()
             .domain(chartData.map(function(d) { return d.name; }))
-            .range([margin.left, chartWidth])
-            .padding(0.1);
+            .range(d3.schemeCategory10);
 
-        var yScale = d3.scaleLinear()
-            .domain([0, d3.max(chartData, function(d) { return d.cost; })])
-            .range([chartHeight, margin.top]);
+        var pie = d3.pie()
+            .value(function(d) { return d.cost; });
 
-        svg.selectAll("rect")
-            .data(chartData)
+        var arc = d3.arc()
+            .outerRadius(radius - 10)
+            .innerRadius(0);
+
+        var pieChart = svg.append("g")
+            .attr("transform", "translate(" + chartWidth / 2 + "," + chartHeight / 2 + ")");
+
+        var arcs = pieChart.selectAll(".arc")
+            .data(pie(chartData))
             .enter()
-            .append("rect")
-            .attr("x", function(d) { return xScale(d.name); })
-            .attr("y", function(d) { return yScale(d.cost); })
-            .attr("width", xScale.bandwidth())
-            .attr("height", function(d) { return chartHeight - yScale(d.cost); })
-            .attr("fill", "steelblue");
+            .append("g")
+            .attr("class", "arc");
 
-        // Add cost labels above each bar
-        svg.selectAll(".cost-label")
-            .data(chartData)
-            .enter()
-            .append("text")
-            .attr("class", "cost-label")
-            .attr("x", function(d) { return xScale(d.name) + xScale.bandwidth() / 2; })
-            .attr("y", function(d) { return yScale(d.cost) - 5; })
+        arcs.append("path")
+            .attr("d", arc)
+            .attr("fill", function(d) { return color(d.data.name); });
+
+        arcs.append("text")
+            .attr("transform", function(d) { return "translate(" + arc.centroid(d) + ")"; })
             .attr("text-anchor", "middle")
-            .text(function(d) { return d.cost; });
+            .text(function(d) { return d.data.name; });
 
-        svg.append("g")
-            .attr("transform", "translate(0," + chartHeight + ")")
-            .call(d3.axisBottom(xScale))
-            .append("text")
-            .attr("class", "axis-label")
-            .attr("x", chartWidth)
-            .attr("y", -10)
-            .style("text-anchor", "end")
-            .text("Name");
-
-        svg.append("g")
-            .attr("transform", "translate(" + margin.left + ", 0)")
-            .call(d3.axisLeft(yScale))
-            .append("text")
-            .attr("class", "axis-label")
-            .attr("transform", "rotate(-90)")
-            .attr("x", -margin.top)
-            .attr("y", 10)
-            .style("text-anchor", "end")
-            .text("Cost");
     </script>
 </body>
 </html>

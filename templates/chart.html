@@ -11,16 +11,13 @@
     <script>
         // Get the chart data from the Flask backend
         var chartData = JSON.parse('{{ chart_data | safe}}');
-        var selectedAttributes = JSON.parse('{{ selected_attributes | tojson }}');
 
+        console.log("Chart data: ", chartData);
 
-        console.log("Chart data: ",chartData)
-        console.log("Selected Attributes: ", selectedAttributes)
-        // Create the chart using D3.js based on the selected attributes
-        // Here, I'm providing a basic example of a scatter plot
+        // Create the chart using D3.js based on the chartData
         var svgWidth = 1000;
         var svgHeight = 1000;
-        var margin = { top: 30, right: 50, bottom: 30, left: 30 };
+        var margin = { top: 20, right: 20, bottom: 30, left: 40 };
         var chartWidth = svgWidth - margin.left - margin.right;
         var chartHeight = svgHeight - margin.top - margin.bottom;
 
@@ -29,15 +26,14 @@
             .attr("width", svgWidth)
             .attr("height", svgHeight);
 
-        // Add your chart code here based on the selected attributes
-        // You can use D3.js or any other charting library to create the desired chart
+        var xScale = d3.scalePoint()
+            .domain(chartData.map(function(d) { return d.name; }))
+            .range([margin.left, chartWidth])
+            .padding(0.5);
 
-        var xScale = d3.scaleLinear()
-            .domain(d3.extent(chartData, function(d) { console.log(d); return d.name; }))
-            .range([margin.left, chartWidth]);
 
         var yScale = d3.scaleLinear()
-            .domain(d3.extent(chartData, function(d) {  console.log(d); return d.cost; }))
+            .domain([0, d3.max(chartData, function(d) { return d.cost; })])
             .range([chartHeight, margin.top]);
 
         svg.selectAll("circle")
@@ -46,8 +42,21 @@
             .append("circle")
             .attr("cx", function(d) { return xScale(d.name); })
             .attr("cy", function(d) { return yScale(d.cost); })
-            .attr("r", 5)
-            .attr("fill", "steelblue");
+            .attr("r", 5)  // Set the radius of the circles
+            .attr("fill", function(d) { return d.cost % 2 === 0 ? "yellow" : "blue"; });
+
+
+        // Add cost labels next to each data point
+        // Add cost labels above each point
+        svg.selectAll(".cost-label")
+            .data(chartData)
+            .enter()
+            .append("text")
+            .attr("class", "cost-label")
+            .attr("x", function(d) { return xScale(d.name); })
+            .attr("y", function(d) { return yScale(d.cost) - 10; })
+            .attr("text-anchor", "middle")
+            .text(function(d) { return d.cost; });
 
         svg.append("g")
             .attr("transform", "translate(0," + chartHeight + ")")
@@ -69,7 +78,6 @@
             .attr("y", 10)
             .style("text-anchor", "end")
             .text("Cost");
-
     </script>
 </body>
 </html>

@@ -20,6 +20,8 @@ UPLOAD_FOLDER = dir_path
 ALLOWED_EXTENSIONS = set(['txt', 'csv'])
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+conn = pyodbc.connect('DRIVER='+driver+';SERVER=tcp:'+server+',1433;DATABASE='+database+';UID='+username+';PWD='+ password+ ';Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;')
+cur = conn.cursor()
 
 # Route for the main page
 @app.route('/')
@@ -36,8 +38,7 @@ def generate_chart():
 
     print("Selected plot: ", selected_plot)
     # Connect to the database
-    conn = pyodbc.connect('DRIVER='+driver+';SERVER=tcp:'+server+',1433;DATABASE='+database+';UID='+username+';PWD='+ password+ ';Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;')
-    cur = conn.cursor()
+
 
     # Execute the SQL query
     query = "SELECT name, cost FROM datas;"
@@ -48,8 +49,7 @@ def generate_chart():
     rows = cur.fetchall()
 
     # Close the cursor and the connection
-    cur.close()
-    conn.close()
+
 
     # Prepare data for the selected attributes
     chart_data = []
@@ -72,6 +72,40 @@ def generate_chart():
     if (selected_plot[0] == 'PieChart'):
         return render_template('piechart.html', chart_data=json.dumps(chart_data), selected_attributes=selected_attributes)
     return render_template('retry.html')
+
+
+@app.route('/largest', methods=['POST'])
+def largest():
+    largest = request.form.get('largest')
+    selected_attributes = request.form.getlist('attributes')
+    selected_plot = request.form.getlist('chart')
+
+    print(largest)
+    query = "select top " + largest +"cost from datas;"
+
+    print(query)
+    cur.execute(query)
+
+    # Fetch all rows
+    rows = cur.fetchall()
+
+    chart_data = []
+    for row in rows:
+        data_point = {}
+        data_point['name'] = row[0]
+        # data_point['cost'] = row[1]
+        for i, attribute in enumerate(['cost']):
+            if attribute in selected_attributes:
+                data_point[attribute] = str(row[i+1])
+        print("DATA: ",data_point)
+        chart_data.append(data_point)
+    chart_data = sorted(chart_data, key=lambda x: int(x['cost']))
+    print("CHART DATA",chart_data)
+    # Render the template with the chart data and selected attributes
+
+    return render_template('piechart.html', chart_data=json.dumps(chart_data), selected_attributes=selected_attributes)
+    
+
 
 if __name__ == '__main__':
     app.run()
