@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chart Demo</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <h1>Chart Demo</h1>
+    <div id="chart"></div>
+
+    <script>
+        // Get the chart data from the Flask backend
+        var chartData = JSON.parse('{{ chart_data | safe}}');
+
+        console.log("Chart data: ", chartData);
+
+        // Create the chart using D3.js based on the chartData
+        var svgWidth = 1000;
+        var svgHeight = 1000;
+        var margin = { top: 20, right: 20, bottom: 30, left: 40 };
+        var chartWidth = svgWidth - margin.left - margin.right;
+        var chartHeight = svgHeight - margin.top - margin.bottom;
+
+        var svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", svgWidth)
+            .attr("height", svgHeight);
+
+        var xScale = d3.scaleBand()
+            .domain(chartData.map(function(d) { return d.name; }))
+            .range([margin.left, chartWidth])
+            .padding(0.1);
+
+        var yScale = d3.scaleLinear()
+            .domain([0, d3.max(chartData, function(d) { return d.cost; })])
+            .range([chartHeight, margin.top]);
+
+        svg.selectAll("rect")
+            .data(chartData)
+            .enter()
+            .append("rect")
+            .attr("x", function(d) { return xScale(d.name); })
+            .attr("y", function(d) { return yScale(d.cost); })
+            .attr("width", xScale.bandwidth())
+            .attr("height", function(d) { return chartHeight - yScale(d.cost); })
+            .attr("fill", "steelblue");
+
+        // Add cost labels above each bar
+        svg.selectAll(".cost-label")
+            .data(chartData)
+            .enter()
+            .append("text")
+            .attr("class", "cost-label")
+            .attr("x", function(d) { return xScale(d.name) + xScale.bandwidth() / 2; })
+            .attr("y", function(d) { return yScale(d.cost) - 5; })
+            .attr("text-anchor", "middle")
+            .text(function(d) { return d.cost; });
+
+        svg.append("g")
+            .attr("transform", "translate(0," + chartHeight + ")")
+            .call(d3.axisBottom(xScale))
+            .append("text")
+            .attr("class", "axis-label")
+            .attr("x", chartWidth)
+            .attr("y", -10)
+            .style("text-anchor", "end")
+            .text("Name");
+
+        svg.append("g")
+            .attr("transform", "translate(" + margin.left + ", 0)")
+            .call(d3.axisLeft(yScale))
+            .append("text")
+            .attr("class", "axis-label")
+            .attr("transform", "rotate(-90)")
+            .attr("x", -margin.top)
+            .attr("y", 10)
+            .style("text-anchor", "end")
+            .text("Cost");
+    </script>
+</body>
+</html>
